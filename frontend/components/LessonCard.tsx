@@ -1,14 +1,26 @@
 import Link from "next/link";
 import type { Lesson } from "@/types/lesson";
 
-function LessonCard({ lesson }: { lesson: Lesson }) {
+interface LessonCardProps {
+    lesson: Lesson;
+    completed?: boolean;
+}
+
+function LessonCard({ lesson, completed }: LessonCardProps) {
     return (
         <Link
             href={`/lessons/${lesson.id}`}
             className="group block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-800"
         >
             <article className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition group-hover:-translate-y-1 group-hover:shadow-md">
-                <h3 className="text-xl font-bold text-slate-900">{lesson.title}</h3>
+                <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-xl font-bold text-slate-900">{lesson.title}</h3>
+                    {completed && (
+                        <span className="shrink-0 text-sm font-semibold text-emerald-700">
+                            ✅ Completed
+                        </span>
+                    )}
+                </div>
                 <p className="mt-3 flex-1 leading-7 text-slate-600">
                     {lesson.description ?? "No description yet."}
                 </p>

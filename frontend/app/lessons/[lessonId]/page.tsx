@@ -1,11 +1,162 @@
 "use client";
 
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { API_URL, type Lesson } from "@/types/lesson";
+import type { LessonCompletionResponse } from "@/types/completion";
+import type { UserProgress } from "@/types/progress";
+
+type GetToken = ReturnType<typeof useAuth>["getToken"];
+
+function LessonCompletion({ id, getToken }: { id: number; getToken: GetToken }) {
+  const [completed, setCompleted] = useState(false);
+  const [checkingProgress, setCheckingProgress] = useState(true);
+  const [completing, setCompleting] = useState(false);
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchProgress = async () => {
+      setCheckingProgress(true);
+      setProgressError(null);
+
+      try {
+        const token = await getToken();
+        if (!token) {
+          throw new Error("No session token available.");
+        }
+
+        const response = await fetch(`${API_URL}/me/progress`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(
+            `Could not load your progress (HTTP ${response.status}).`,
+          );
+        }
+
+        const data: UserProgress = await response.json();
+        setCompleted(data.completed_lessons.includes(id));
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        setProgressError(
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while checking your progress.",
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setCheckingProgress(false);
+        }
+      }
+    };
+
+    void fetchProgress();
+    return () => controller.abort();
+  }, [getToken, id, retryCount]);
+
+  async function completeLesson() {
+    setCompleting(true);
+    setCompletionError(null);
+
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error("No session token available.");
+      }
+
+      const response = await fetch(`${API_URL}/lessons/${id}/complete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Could not complete lesson (HTTP ${response.status}).`,
+        );
+      }
+
+      const data: LessonCompletionResponse = await response.json();
+      if (!data.completed) {
+        throw new Error("The lesson completion was not confirmed.");
+      }
+
+      setCompleted(true);
+    } catch (error) {
+      setCompletionError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while completing this lesson.",
+      );
+    } finally {
+      setCompleting(false);
+    }
+  }
+
+  if (checkingProgress) {
+    return (
+      <p role="status" className="mt-6 text-sm text-slate-600">
+        Checking your progress…
+      </p>
+    );
+  }
+
+  if (progressError) {
+    return (
+      <div role="alert" className="mt-6 text-sm text-red-800">
+        <p>Could not check whether you completed this lesson. {progressError}</p>
+        <button
+          type="button"
+          onClick={() => setRetryCount((count) => count + 1)}
+          className="mt-3 rounded-lg border border-red-300 px-4 py-2 font-semibold transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (completed) {
+    return (
+      <p role="status" className="mt-6 font-semibold text-emerald-800">
+        Completed ✅
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-6">
+      {completionError && (
+        <p role="alert" className="mb-3 text-sm text-red-800">
+          {completionError}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => void completeLesson()}
+        disabled={completing}
+        className="rounded-lg bg-emerald-700 px-5 py-3 font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {completing ? "Completing..." : "Complete Lesson"}
+      </button>
+    </div>
+  );
+}
 
 function LessonContent() {
+  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
   const { lessonId } = useParams<{ lessonId: string }>();
   const id = Number(lessonId);
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -131,6 +282,25 @@ function LessonContent() {
             <p className="mt-8 inline-flex rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
               Reward: {lesson.xp_reward} XP
             </p>
+            {isLoaded && isSignedIn && (
+              <LessonCompletion
+                key={`${userId}-${id}`}
+                id={id}
+                getToken={getToken}
+              />
+            )}
+            {isLoaded && !isSignedIn && (
+              <div className="mt-6">
+                <SignInButton>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-emerald-700 px-5 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                  >
+                    Sign in to complete this lesson
+                  </button>
+                </SignInButton>
+              </div>
+            )}
           </section>
         )}
       </article>

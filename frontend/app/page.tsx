@@ -2,9 +2,17 @@
 
 import { API_URL, type Lesson } from "@/types/lesson";
 import LessonCard from "@/components/LessonCard";
+import ProgressSummary from "@/components/ProgressSummary";
+import useUserProgress from "@/hooks/useUserProgress";
 import { useEffect, useState } from "react";
 
 export default function HomePage() {
+  const {
+    progress,
+    loading: progressLoading,
+    error: progressError,
+    refetch,
+  } = useUserProgress();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +72,34 @@ export default function HomePage() {
           </p>
         </header>
 
+        {progressLoading && (
+          <p
+            role="status"
+            className="mb-8 rounded-xl bg-white p-6 text-slate-600 shadow-sm"
+          >
+            Loading your progress…
+          </p>
+        )}
+
+        {progressError && (
+          <div
+            role="alert"
+            className="mb-8 rounded-xl border border-red-200 bg-red-50 p-6 text-red-800"
+          >
+            <p className="font-semibold">Your progress couldn’t be loaded.</p>
+            <p className="mt-1 text-sm">{progressError}</p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-4 rounded-lg bg-red-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        <ProgressSummary progress={progress} />
+
         <section aria-labelledby="lessons-heading">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <h2 id="lessons-heading" className="text-2xl font-bold">
@@ -111,7 +147,13 @@ export default function HomePage() {
           {!loading && !error && lessons.length > 0 && (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {lessons.map((lesson) => (
-                <LessonCard key={lesson.id} lesson={lesson} />
+                <LessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  completed={
+                    progress?.completed_lessons.includes(lesson.id) ?? false
+                  }
+                />
               ))}
             </div>
           )}

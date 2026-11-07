@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { API_URL } from "@/types/lesson";
 
 interface Me {
-  user_id: string;
+  id: number;
+  clerk_id: string;
 }
 
 export default function CurrentUser() {
@@ -70,8 +71,8 @@ export default function CurrentUser() {
   }
 
   return (
-    <span className="hidden text-xs text-slate-500 sm:inline" title={me.user_id}>
-      {me.user_id}
+    <span className="hidden text-xs text-slate-500 sm:inline" title={me.clerk_id}>
+      {me.clerk_id}
     </span>
   );
 }

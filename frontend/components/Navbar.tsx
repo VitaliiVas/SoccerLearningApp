@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
-import AuthTest from "@/components/AuthTest";
 import CurrentUser from "@/components/CurrentUser";
 
 export default function Navbar() {
@@ -26,7 +25,6 @@ export default function Navbar() {
       </Show>
 
       <Show when="signed-in">
-        <AuthTest />
         <CurrentUser />
         <UserButton />
       </Show>
