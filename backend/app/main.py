@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, delete
 from sqlalchemy.exc import IntegrityError
 
-from .auth import get_current_user, require_admin
+from .auth import AUTHORIZED_PARTIES, get_current_user, require_admin
 from .database import get_db
 from .models import Lesson, UserLessonProgress
 from .services.users import get_or_create_user
@@ -18,9 +18,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    # The frontend origins are the same set Clerk tokens are accepted from.
+    allow_origins=sorted(AUTHORIZED_PARTIES),
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 

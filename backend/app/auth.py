@@ -38,7 +38,14 @@ def get_current_user(
 
     try:
         signing_key = jwks_client.get_signing_key_from_jwt(token)
-        claims = jwt.decode(token, signing_key.key, algorithms=["RS256"])
+        # Clerk session tokens live ~60s, so a few seconds of clock skew
+        # between Clerk and this server would otherwise cause random 401s.
+        claims = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            leeway=5,
+        )
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 

@@ -22,7 +22,7 @@ function LessonCard({ lesson, completed }: LessonCardProps) {
                     )}
                 </div>
                 <p className="mt-3 flex-1 leading-7 text-slate-600">
-                    {lesson.description ?? "No description yet."}
+                    {lesson.description || "No description yet."}
                 </p>
                 <p className="mt-6 w-fit rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
                     {lesson.xp_reward} XP
